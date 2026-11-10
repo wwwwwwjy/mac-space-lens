@@ -8,7 +8,7 @@
 
 ## 下载与安装
 
-在本仓库的 [Releases](https://github.com/wwwwwwjy/mac-space-lens/releases) 下载 `空间磁盘管家-1.1.2-universal.zip`，解压后将完整 `.app` 拖入“应用程序”。正式 App 内置 Python 运行环境，不需要另外安装 Python、Node.js 或浏览器扩展。
+在本仓库的 [Releases](https://github.com/wwwwwwjy/mac-space-lens/releases) 下载 `SpaceLens-1.1.2-universal.zip`，解压后将完整 `.app` 拖入“应用程序”。正式 App 内置 Python 运行环境，不需要另外安装 Python、Node.js 或浏览器扩展。
 
 当前安装包为本地 ad-hoc 签名，尚未获得 Apple Developer ID 公证。通过网络下载后，macOS 可能要求在“系统设置 → 隐私与安全性”中确认允许打开。请核对下载来源及发布页的 SHA-256 校验值。
 
