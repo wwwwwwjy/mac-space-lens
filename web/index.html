@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>空间 · 本地磁盘管家</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside class="sidebar">
+  <div class="brand"><span class="brand-mark">◫</span><span>空间<small>SPACE LENS · 本地版</small></span></div>
+  <div class="nav-label">磁盘工作台</div>
+  <button class="nav active" data-view="overview"><span>◉</span>空间概览</button>
+  <button class="nav" data-view="browse"><span>▤</span>文件与文件夹</button>
+  <button class="nav" data-view="applications"><span>▣</span>软件卸载</button>
+  <button class="nav" data-view="orphans"><span>⌕</span>卸载残留</button>
+  <button class="nav" data-view="history"><span>↶</span>清理记录与撤回</button>
+  <button class="nav" id="ai-settings-open"><span>✧</span>本地 AI（可选）</button>
+  <div class="side-note"><span class="live-dot"></span> 在当前 Mac 上运行<p>离线规则随时可用<br>可选 AI 仅连接本机模型</p></div>
+  <button class="exit" id="quit">退出磁盘管家 ↗</button>
+</aside>
+<main>
+  <header><div><div class="eyebrow">让每一份空间，都有去处</div><h1 id="page-title">先看清，再清理。</h1><p class="subtitle">找到占用大户，保留重要的作品与资料。</p></div><button class="primary" id="scan">开始扫描</button></header>
+  <div class="scan-status" id="scan-status" role="status">正在读取本机空间…</div>
+  <section class="summary" id="summary">
+    <div class="disk-card"><div><span class="mini-title">本地磁盘 · APFS 容器</span><div class="big-number" id="free">—</div><p>当前可用空间</p><div class="meter"><span id="usage-bar"></span></div><small id="capacity">读取中</small></div><div class="disk-ring"><span><b id="used-percent">—</b><small>已使用</small></span></div></div>
+    <div class="principle"><span class="mini-title">两种清理方式</span><h2>移入废纸篓可撤回<br>直接删除不可撤回</h2><p>建议先移入废纸篓。确定不再需要时，可选择直接删除；它不经过废纸篓，无法从这里撤回。</p><span class="pill">手动选择 · 确认后执行</span></div>
+  </section>
+  <section id="overview-chart" class="section"><div class="section-heading"><h2>空间都去了哪里</h2><span>点击目录，逐层查看</span></div><div class="roots" id="roots"></div><p class="footnote">统计的是可读取文件的已分配空间。APFS 克隆、快照、系统文件与权限限制会导致它与磁盘总占用不同；不是可释放空间的保证值。</p></section>
+  <section class="operation-result" id="operation-result" hidden aria-live="polite"><div><strong id="result-title"></strong><p id="result-message"></p><details id="result-errors" hidden><summary>查看未完成的项目</summary><ul id="result-error-list"></ul></details></div><button id="dismiss-result" aria-label="关闭清理结果提示">×</button></section>
+  <section class="section" id="files-section">
+    <div class="section-heading"><div><h2 id="list-title">清理建议</h2><p id="list-subtitle">看懂用途、删除条件和影响，再决定是否清理。</p></div><div class="search"><span>⌕</span><input id="search" type="search" placeholder="搜索扫描到的路径或名称" aria-label="搜索文件"></div></div>
+    <div class="tabs" id="tabs"><button class="selected" data-risk="recommended">建议清理</button><button data-risk="review">确认后可清理</button><button data-risk="caution">慎重清理</button><button data-risk="all">全部候选</button></div>
+    <div class="breadcrumb" id="breadcrumb" hidden><button id="up">↑ 上一级</button><span id="current-path"></span></div>
+    <div id="list-message" class="list-message"></div>
+    <div class="bulk-toolbar"><label class="select-all-label"><input type="checkbox" id="select-all">全选当前列表</label><span id="select-scope">仅选择当前页可清理项</span><div class="bulk-actions"><button class="danger-outline" data-operation="delete" disabled>直接删除</button><button class="primary" data-operation="trash" disabled>移入废纸篓</button></div></div>
+    <div class="table-wrap"><table><thead><tr><th class="check-col">选择</th><th>文件 / 文件夹 · 用途说明</th><th class="size-col">磁盘占用</th><th class="risk-col">清理建议</th><th class="action-col">查看</th></tr></thead><tbody id="rows"></tbody></table></div>
+    <div class="empty" id="empty" hidden>这个分类下没有找到大于 20 MiB 的项目。可以切换分类或逐层浏览文件夹。</div>
+    <div class="pager" id="pager" hidden><button id="prev-page">上一页</button><span id="page-info"></span><button id="next-page">下一页</button></div>
+    <p class="footnote" id="list-footnote">建议列表只列出 ≥20 MiB 的项目，最多 120 项，父子目录已去重。目录浏览可看到小文件。未完整扫描的目录不可整项清理。</p>
+  </section>
+  <section id="history-section" class="section" hidden><div class="section-heading"><h2>你做过的清理</h2><button id="refresh-history">刷新记录</button></div><p class="footnote">只有移入废纸篓的项目可撤回；已直接删除或已清空废纸篓的项目不可撤回。同名文件已存在时不会覆盖。</p><div id="history"></div></section>
+  <section id="apps-section" class="section" hidden>
+    <div class="section-heading"><div><h2 id="apps-title">已安装的软件</h2><p id="apps-subtitle">先卸载本体，再单独核对残留。</p></div><button id="apps-refresh">开始扫描</button></div>
+    <div class="app-guide" id="apps-guide"></div>
+    <div class="search app-search"><span>⌕</span><input id="apps-search" type="search" placeholder="搜索软件名称或应用标识" aria-label="搜索软件"></div>
+    <p id="apps-status" class="list-message" role="status"></p>
+    <div id="app-list" class="app-grid"></div>
+    <section id="residual-panel" hidden>
+      <div class="section-heading"><div><h2 id="residual-title"></h2><p id="residual-identity"></p></div><button id="residual-refresh">重新检索残留</button></div>
+      <div id="residual-absent" class="app-guide" hidden><p>没有找到应用，不等于它已经卸载。它可能位于外置磁盘，或属于命令行工具、后台组件。</p><label class="ack"><input type="checkbox" id="residual-absent-ack">我确认这个标识对应的软件已经卸载，没有其他版本或组件在使用这些数据。</label><button id="residual-confirm-absent" disabled>确认归属，再查看可清理项</button></div>
+      <p id="residual-notice" class="list-message"></p>
+      <div class="bulk-toolbar"><label class="select-all-label"><input type="checkbox" id="residual-all">全选可清理项</label><span id="residual-count">未选择</span><button class="primary" id="residual-preview" disabled>核对并清理所选残留</button></div>
+      <div id="residual-list" class="residual-list"></div>
+      <p class="footnote">可全选残留后核对清理。同名目录需要额外确认归属；共享数据或系统组件会说明不能直接清理的原因。清理会将所选目录及其中全部内容移入废纸篓，可在清理记录撤回。</p>
+    </section>
+  </section>
+  <footer>空间磁盘管家 1.1.2 <span>·</span> 用途说明不读取文件正文 <span>·</span> 清理前建议退出相关应用</footer>
+</main>
+<div class="selection-bar" id="selection-bar" hidden><div><b id="selected-count">0 项</b><span id="selected-size"></span><small>废纸篓可撤回 · 直接删除不可撤回</small></div><div class="bulk-actions"><button id="clear-selection">取消选择</button><button class="danger-outline" data-operation="delete">直接删除</button><button class="primary" data-operation="trash">移入废纸篓</button></div></div>
+<dialog id="confirm-dialog"><div class="dialog-head"><span class="eyebrow" id="confirm-eyebrow">最后确认</span><h2 id="confirm-title">将这些文件移到废纸篓？</h2><p id="confirm-summary"></p></div><div id="confirm-list"></div><div class="warning" id="confirm-warning">请先退出相关应用。缓存可能重新生成；项目素材移走后可能导致剪辑工程离线。这里不会永久删除。</div><label class="ack" id="ack-wrap"><input type="checkbox" id="caution-ack">我已核对慎重清理项，并确认有备份或不再需要。</label><label class="delete-confirm" id="delete-confirm-wrap" hidden>输入「永久删除」以继续<input id="delete-confirm-text" type="text" placeholder="永久删除" autocomplete="off" spellcheck="false"></label><div class="dialog-actions"><button id="cancel-confirm">返回检查</button><button class="primary" id="commit">确认移到废纸篓</button></div></dialog>
+<dialog id="app-confirm-dialog"><div class="dialog-head"><span class="eyebrow">逐项确认 · 可在清理记录撤回</span><h2 id="app-confirm-title"></h2><p id="app-confirm-summary"></p></div><div id="app-confirm-list"></div><label class="delete-confirm" id="app-name-wrap">输入完整应用名称以确认卸载<input id="app-confirm-name" autocomplete="off" spellcheck="false"></label><label class="ack" id="app-ownership-wrap" hidden><input type="checkbox" id="app-ownership-ack">我确认标注“需确认归属”的目录只属于这个已卸载软件，没有其他软件使用。</label><label class="ack"><input type="checkbox" id="app-confirm-ack">我已核对内容与影响，已退出相关软件，重要资料已备份。</label><div class="dialog-actions"><button id="app-confirm-cancel">返回检查</button><button class="primary" id="app-confirm-commit" disabled>确认移入废纸篓</button></div></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<dialog id="ai-settings-dialog" class="ai-dialog"><div class="dialog-head"><span class="eyebrow">可选 · 本机模型</span><h2>让本地 AI 补充解释</h2><p>离线规则已经可以识别常见用途。自动寻找已安装的 AI 软件和可连接的本机模型服务。连接后可辅助解释文件、分析残留归属和给出检索建议；不连接也能清理。</p></div><div class="ai-form"><button id="ai-discover">重新搜索本机 AI 软件与服务</button><p id="ai-discovery-status" role="status"></p><div id="ai-clients" class="ai-clients"></div><div id="ai-services"></div><details class="ai-manual"><summary>手动连接本地服务</summary><label>服务类型<select id="ai-provider"><option value="ollama">Ollama</option><option value="lmstudio">LM Studio</option></select></label><label>本机服务地址<input id="ai-endpoint" type="url" value="http://127.0.0.1:11434" spellcheck="false"></label><button id="ai-detect">检测本机模型</button><label>已下载的模型<select id="ai-model"><option value="">先检测本机模型</option></select></label><p id="ai-settings-status" role="status"></p></details><p class="footnote">点击某项的“本地 AI 解释”才会发送该项的路径、类型和规则说明；用户名会替换为 ~，不发送文件正文。仅连接本机服务，不导入客户端账户。AI 只提供建议，不改变保护级别，不自动删除。模型服务独立运行，本应用不会替你启动、关闭或下载模型。</p></div><div class="dialog-actions"><button id="ai-settings-close">取消</button><button class="primary" id="ai-save">保存设置</button></div></dialog>
+<dialog id="ai-result-dialog" class="ai-dialog"><div class="dialog-head"><span class="eyebrow">本地 AI 解释 · 仅供核对</span><h2 id="ai-result-name"></h2><p id="ai-result-notice">根据路径推测，没有读取文件正文，也没有检查工程引用。</p></div><div id="ai-result-text" class="ai-answer" role="status"></div><div class="dialog-actions"><button id="ai-result-close">关闭</button></div></dialog>
+<script src="/app.js"></script>
+<script src="/applications.js"></script>
+</body></html>
