@@ -1,12 +1,12 @@
 """Exercise the distributed backend with owned fixtures, never existing user files."""
 import json
+import hashlib
 import os
 from pathlib import Path
-import signal
+import platform
 import socket
 import subprocess
 import tempfile
-import time
 import urllib.parse
 import urllib.request
 
@@ -40,6 +40,13 @@ def check(architecture, file_actions=False):
         status = api('status')
         assert status['home'] == str(Path.home())
         assert not status['scan']['running'] and not status['scan']['started'], 'Unexpected startup scan'
+        manifest = json.loads((BINARY.parent.parent/'author-support-integrity.json').read_text())
+        assert manifest['github'] == 'wwwwwwjy'
+        assert set(manifest['assets']) == {'author-alipay.png', 'author-wechat.png'}
+        for filename, digest in manifest['assets'].items():
+            with urllib.request.urlopen(base+'/assets/'+filename, timeout=10) as response:
+                assert response.headers['Content-Type'] == 'image/png'
+                assert hashlib.sha256(response.read()).hexdigest() == digest, 'Packaged receipt differs'
         apps = api('apps')
         assert apps['items'], 'Missing software inventory'
         assert any(x.get('icon', '').startswith('data:image/png;base64,') for x in apps['items'] if x.get('icon')), 'No native app icons'
@@ -83,5 +90,6 @@ def check(architecture, file_actions=False):
 
 
 if __name__=='__main__':
-    check('arm64', file_actions=True)
-    check('x86_64')
+    check(platform.machine())
+    if platform.machine() == 'arm64':
+        check('x86_64')

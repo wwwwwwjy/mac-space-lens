@@ -40,7 +40,7 @@ python3 -m venv .build/venv
 
 ```text
 dist/空间磁盘管家.app
-dist/空间磁盘管家-1.1.2-universal.zip
+dist/SpaceLens-1.0.0-universal.zip
 dist/build-report.json
 ```
 
@@ -57,6 +57,6 @@ dist/build-report.json
 1. 运行 [回归测试](TESTING.md)。
 2. 打包并验证 App 签名和架构。
 3. 计算 ZIP 的 SHA-256 校验值。
-4. 在 GitHub Release 附加 ZIP、校验文件和版本说明；公开附件使用 `SpaceLens-1.1.2-universal.zip`，内容与本机构建的中文名 ZIP 一致。源码仓库保留源文件，不堆积构建缓存。
+4. 在 GitHub Release 附加 ZIP、校验文件和版本说明；公开附件使用 `SpaceLens-1.0.0-universal.zip`，与本机构建产物一致。源码仓库保留源文件，不堆积构建缓存。
 
 版本号分别出现在 `packaging/build_app.py`、`web/index.html` 和说明文档中，发布前保持一致。

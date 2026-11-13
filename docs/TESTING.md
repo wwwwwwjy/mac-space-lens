@@ -8,6 +8,7 @@
 python3 -m unittest discover -s tests -v
 node tests/test_frontend.cjs
 node tests/test_app_frontend.cjs
+node tests/test_settings_frontend.cjs
 ```
 
 Python 测试使用标准库，不要求安装模型或启用完全磁盘访问权限。文件操作测试只在自己创建的临时用户目录中运行，模拟数据与实际用户资料隔离；不操作现有应用。
@@ -39,19 +40,24 @@ check('x86_64')
 PY
 ```
 
-`check()` 默认不执行文件删除。`packaging/smoke_backend.py` 的命令行入口以及 `smoke_app_actions.py` 包含专属测试样本的实际移动、删除或撤回，仅供开发者在理解脚本和权限影响后手动使用，不在日常使用时运行。
+`check()` 及 `packaging/smoke_backend.py` 的命令行入口默认只读，不执行文件删除。开发者确需验证文件动作时可显式调用 `check(..., file_actions=True)`，它只处理自己创建的临时样本；不要使用个人资料替换测试样本。
 
 原生窗口的只读检查：
 
 ```sh
 "dist/空间磁盘管家.app/Contents/MacOS/SpaceLens" --smoke-test
 "dist/空间磁盘管家.app/Contents/MacOS/SpaceLens" --smoke-features
+"dist/空间磁盘管家.app/Contents/MacOS/SpaceLens" --smoke-coffee
 ```
 
 特征检查会读取已安装应用的元数据，并使用虚构残留项目展示界面；不要把包含实际应用路径的截图直接作为公开素材。
 
 ## 已验证范围
 
-1.1.2 的本地验证环境为 macOS 15.7.5、M2 Pro。42 项 Python 测试及两组前端测试通过，打包后的 arm64 和 x86_64（Rosetta）运行、图标显示与退出清理通过。
+1.0.0 的本地验证环境为 macOS 15.7.5、M2 Pro。46 项 Python 测试及三组前端测试通过，打包后的 arm64 和 x86_64（Rosetta）运行、图标显示与退出清理通过。
 
 这些结果不代表所有 Mac、所有权限组合或所有第三方软件都已实测。模型接口测试使用受控模拟服务，不能据此声称真实模型在特定机器上的推理速度或回答质量。
+
+## 设置界面与固定资源检查
+
+覆盖固定资源完整性、路径白名单、不可上传替换及延迟显示测试；设置页和打赏弹窗不启动扫描。收款码源图和排版图分别通过系统 Vision 解码，确认付款地址一致；成品同为 640×640，并保留中心标识。原生界面测试会加载两张图片，检查显示宽高一致且没有支付配置编辑控件。

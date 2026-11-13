@@ -12,7 +12,6 @@ import sqlite3
 import shutil
 import subprocess
 import threading
-import time
 import tempfile
 import urllib.parse
 import webbrowser
@@ -24,6 +23,7 @@ from storage import APP_DIR, HOME, STATE, DATA_DIR, Inventory
 from lifecycle import Lifecycle
 from local_ai import LocalAI
 from app_management import AppManager
+from support_assets import SUPPORT_ASSETS, read_support_asset
 
 
 class LocalServer(ThreadingHTTPServer):
@@ -88,6 +88,9 @@ def make_handler(inv, actions, token, lifecycle=None, ai=None, apps=None):
                     self.send(200, apps.refresh())
                 elif url.path == '/api/apps/orphans' and apps:
                     self.send(200, apps.orphan_targets())
+                elif url.path in SUPPORT_ASSETS:
+                    image, mime = read_support_asset(url.path)
+                    self.send(200, image, mime)
                 elif url.path in {'/', '/style.css', '/app.js', '/applications.js'}:
                     name = {'/': 'index.html', '/style.css': 'style.css', '/app.js': 'app.js', '/applications.js': 'applications.js'}[url.path]
                     mime = {'/': 'text/html', '/style.css': 'text/css', '/app.js': 'text/javascript', '/applications.js': 'text/javascript'}[url.path]
@@ -221,10 +224,8 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8769)
     parser.add_argument('--no-browser', action='store_true')
-    parser.add_argument('--resume-session', action='store_true', help='Keep the existing local browser session during an update.')
     parser.add_argument('--desktop', action='store_true')
     parser.add_argument('--parent-pid', type=int, default=0)
-    parser.add_argument('--no-auto-scan', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     os.umask(0o077)
     inv, actions = Inventory(), TrashManager(state=DATA_DIR)
@@ -232,14 +233,6 @@ def main():
     ai = LocalAI(DATA_DIR, HOME)
     apps = AppManager(actions, HOME, DATA_DIR)
     token = secrets.token_urlsafe(32)
-    if args.resume_session:
-        try:
-            previous = json.loads((STATE / 'session.json').read_text())
-            old_url = urllib.parse.urlsplit(previous['url'])
-            if old_url.scheme == 'http' and old_url.hostname == '127.0.0.1' and old_url.port == args.port and 32 <= len(old_url.fragment) <= 128:
-                token = old_url.fragment
-        except (OSError, ValueError, KeyError, TypeError):
-            pass
     handler = make_handler(inv, actions, token, lifecycle, ai, apps)
     try:
         server = LocalServer(('127.0.0.1', args.port), handler)
@@ -253,7 +246,6 @@ def main():
         signal.signal(signal.SIGINT, lambda *_: lifecycle.request_exit())
     print(json.dumps({'ready': url}) if args.desktop else '本地磁盘管家已启动：'+url, flush=True)
     # Scanning is started only by an explicit POST /api/scan from the scan button.
-    # Keep --no-auto-scan accepted for older launchers; startup is always idle now.
     if not args.no_browser:
         webbrowser.open(url)
     try:

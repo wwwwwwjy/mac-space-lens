@@ -23,7 +23,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     var relaunchProcess: Process?
     let permissionSmoke = CommandLine.arguments.contains("--smoke-permission")
     let featureSmoke = CommandLine.arguments.contains("--smoke-features")
-    let smoke = CommandLine.arguments.contains("--smoke-test") || CommandLine.arguments.contains("--smoke-permission") || CommandLine.arguments.contains("--smoke-features")
+    let supportSmoke = CommandLine.arguments.contains("--smoke-coffee")
+    let smoke = CommandLine.arguments.contains("--smoke-test") || CommandLine.arguments.contains("--smoke-permission") || CommandLine.arguments.contains("--smoke-features") || CommandLine.arguments.contains("--smoke-coffee")
     let setupRevision = 1
 
     var permissionRecord: URL {
@@ -350,7 +351,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.frameInfo.isMainFrame, let url = message.frameInfo.request.url,
               url.host == "127.0.0.1", url.port == serviceURL?.port else { return }
-        if let command = message.body as? String, command == "quit" { NSApp.terminate(nil) }
+        guard let command = message.body as? String else { return }
+        switch command {
+        case "quit": NSApp.terminate(nil)
+        case "permissions": openFullDiskAccess()
+        case "project":
+            if let project = URL(string: "https://github.com/wwwwwwjy/mac-space-lens") { NSWorkspace.shared.open(project) }
+        default: break
+        }
     }
 
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -366,6 +374,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         guard smoke, !closing, webView.url?.host == "127.0.0.1" else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in
             guard let self = self, !self.closing else { return }
+            if self.supportSmoke {
+                self.checkSupportInterface()
+                return
+            }
             if self.featureSmoke {
                 self.checkFeatureInterface()
                 return
@@ -390,6 +402,37 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
                     fputs("SMOKE_FAILED feature snapshot\n", stderr)
                 }
                 next()
+            }
+        }
+    }
+
+    func checkSupportInterface() {
+        let initial = """
+        if(document.getElementById('coffee-alipay').hasAttribute('src')||document.getElementById('coffee-wechat').hasAttribute('src'))throw Error('Eager receipt load');
+        await view('settings');
+        const status=await api('status');if(status.scan.running||status.scan.started)throw Error('Unexpected scan');
+        document.getElementById('author-support').scrollIntoView({block:'end'});
+        return {settings:!document.getElementById('settings-section').hidden,receipt_open:document.getElementById('coffee-dialog').open,scan_started:status.scan.started};
+        """
+        webView.callAsyncJavaScript(initial, arguments: [:], in: nil, in: .page) { result in
+            print("SMOKE_SETTINGS " + String(describing: result))
+            self.snapshotFeature("settings") {
+                let open = """
+                document.getElementById('coffee-open').onclick();
+                const images=[document.getElementById('coffee-alipay'),document.getElementById('coffee-wechat')];
+                await Promise.all(images.map(x=>x.decode()));
+                const boxes=images.map(x=>x.getBoundingClientRect());
+                if(images.some(x=>x.naturalWidth!==640||x.naturalHeight!==640))throw Error('Receipt dimensions');
+                if(Math.abs(boxes[0].width-boxes[1].width)>0.1||Math.abs(boxes[0].height-boxes[1].height)>0.1||boxes.some(b=>Math.abs(b.width-b.height)>0.1))throw Error('Unequal visual size or stretched receipt');
+                if(document.querySelectorAll('#coffee-dialog input,#coffee-dialog select,#coffee-dialog textarea').length)throw Error('Editable payment settings');
+                return {loaded:images.length,width:boxes[0].width,height:boxes[0].height,editable:false};
+                """
+                self.webView.callAsyncJavaScript(open, arguments: [:], in: nil, in: .page) { result in
+                    print("SMOKE_COFFEE " + String(describing: result))
+                    self.snapshotFeature("coffee") {
+                        self.webView.evaluateJavaScript("document.getElementById('coffee-close').onclick()") { _, _ in self.window.performClose(nil) }
+                    }
+                }
             }
         }
     }

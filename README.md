@@ -2,13 +2,15 @@
 
 一款用中文说明“文件是什么、能不能清理、删后有什么影响”的 macOS 本地空间管理工具。
 
+作者：**汪同学** · GitHub：[wwwwwwjy](https://github.com/wwwwwwjy)
+
 支持磁盘占用分析、软件卸载、卸载残留核对，以及可选的本地 AI 解释。默认等待用户点击开始扫描；所有清理均需手动选择并确认。
 
-**当前版本：1.1.2 · macOS 12+ · Apple Silicon / Intel 通用版**
+**当前版本：1.0.0 · macOS 12+ · Apple Silicon / Intel 通用版**
 
 ## 下载与安装
 
-在本仓库的 [Releases](https://github.com/wwwwwwjy/mac-space-lens/releases) 下载 `SpaceLens-1.1.2-universal.zip`，解压后将完整 `.app` 拖入“应用程序”。正式 App 内置 Python 运行环境，不需要另外安装 Python、Node.js 或浏览器扩展。
+在本仓库的 [Releases](https://github.com/wwwwwwjy/mac-space-lens/releases) 下载 `SpaceLens-1.0.0-universal.zip`，解压后将完整 `.app` 拖入“应用程序”。正式 App 内置 Python 运行环境，不需要另外安装 Python、Node.js 或浏览器扩展。
 
 当前安装包为本地 ad-hoc 签名，尚未获得 Apple Developer ID 公证。通过网络下载后，macOS 可能要求在“系统设置 → 隐私与安全性”中确认允许打开。请核对下载来源及发布页的 SHA-256 校验值。
 
@@ -85,11 +87,12 @@ python3 -m venv .build/venv
 python3 -m unittest discover -s tests -v
 node tests/test_frontend.cjs
 node tests/test_app_frontend.cjs
+node tests/test_settings_frontend.cjs
 ```
 
 文件移动与删除测试在 macOS 上运行，使用测试专属临时目录。不要用个人资料代替测试样本。
 
-1.1.2 已在 macOS 15.7.5 / M2 Pro 上验证 42 项 Python 测试、两组前端测试，以及打包后的 arm64 / x86_64（Rosetta）运行和退出清理。Intel 实机、其他系统版本及真实模型推理仍需要对应环境验证。见 [测试说明](docs/TESTING.md)。
+1.0.0 已在 macOS 15.7.5 / M2 Pro 上验证 46 项 Python 测试、三组前端测试，以及打包后的 arm64 / x86_64（Rosetta）运行和退出清理。Intel 实机、其他系统版本及真实模型推理仍需要对应环境验证。见 [测试说明](docs/TESTING.md)。
 
 ## 目录结构
 
@@ -107,6 +110,7 @@ app_management.py       软件身份、卸载与残留核对
 application_catalog.py  应用元数据识别
 app_presentation.py     真实软件名称与图标
 local_ai.py             本地 AI 服务检测与解释
+support_assets.py       固定作者收款码的资源清单与完整性检查
 trash-helper.swift      macOS 原生废纸篓接口
 ```
 
@@ -115,3 +119,7 @@ trash-helper.swift      macOS 原生废纸篓接口
 欢迎通过 Issues 描述问题，提交时请提供系统版本、App 版本、操作步骤及脱敏后的错误信息。请勿上传带个人路径、文件清单、账号信息或会话令牌的扫描库和日志。
 
 修改方式见 [贡献说明](CONTRIBUTING.md)，版本变化见 [更新记录](CHANGELOG.md)。本仓库目前未指定开源许可证；公开代码不代表已经授予额外的软件使用或再分发许可。
+
+## 支持作者
+
+软件设置页底部提供“请作者喝一杯咖啡”入口，点击后可查看支付宝和微信收款码。支持完全自愿，不影响软件功能。

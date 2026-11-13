@@ -33,6 +33,7 @@ function renderRows(){
 }
 async function loadItems(){
   const seq=++loadSequence;
+  if(state.view==='settings')return;
   if(state.view==='history')return loadHistory();
   if(['applications','orphans'].includes(state.view))return loadApplications();
   state.loading=true;selectionBar();
@@ -57,11 +58,12 @@ async function loadHistory(){
     '<div class="empty">还没有清理记录。你可以先浏览，所有文件都保持原样。</div>';
 }
 async function view(name,path){
-  if(['applications','orphans'].includes(name))state.selection.clear();
+  if(['applications','orphans','settings'].includes(name))state.selection.clear();
   state.view=name;state.offset=0;if(path)state.path=path;if(!state.path)state.path=state.home;
   document.querySelectorAll('.nav').forEach(x=>x.classList.toggle('active',x.dataset.view===name));
-  $('page-title').textContent={overview:'先看清，再清理。',browse:'每个文件，都心中有数。',history:'每次清理，都留有退路。',applications:'卸载软件，数据分开核对。',orphans:'找回遗漏的卸载残留。'}[name];
+  $('page-title').textContent={overview:'先看清，再清理。',browse:'每个文件，都心中有数。',history:'每次清理，都留有退路。',applications:'卸载软件，数据分开核对。',orphans:'找回遗漏的卸载残留。',settings:'按你的习惯，安心使用。'}[name];
   $('summary').hidden=name!=='overview';$('overview-chart').hidden=name!=='overview';$('files-section').hidden=!['overview','browse'].includes(name);$('apps-section').hidden=!['applications','orphans'].includes(name);$('history-section').hidden=name!=='history';
+  $('settings-section').hidden=name!=='settings';
   $('tabs').hidden=name!=='overview';$('breadcrumb').hidden=name!=='browse';$('search').parentElement.hidden=name!=='overview';
   $('list-title').textContent=name==='browse'?'文件与文件夹':'清理建议';
   $('list-subtitle').textContent=name==='browse'?'点击文件夹继续查看；说明按路径和类型判断，不能代替备份。':'看懂用途、删除条件和影响，再决定是否清理。';
@@ -69,12 +71,13 @@ async function view(name,path){
   await loadItems();updateScanControl();
 }
 function updateScanControl(){
+  $('scan').hidden=state.view==='settings';
   const scoped=['applications','orphans'].includes(state.view)&&typeof appState!=='undefined';
   const scanning=scoped?appState.scanning:state.running;
   const done=scoped?Boolean(appState.cache[state.view]):state.done;
   $('scan').textContent=scanning?'正在扫描…':done?'↻ 重新扫描':'开始扫描';
   $('scan').disabled=state.running||state.busy||(scoped&&(appState.scanning||appState.busy));
-  $('scan-status').hidden=scoped&&!state.running;
+  $('scan-status').hidden=state.view==='settings'||(scoped&&!state.running);
 }
 async function status(){
   const d=await api('status');state.home=d.home;const wasRunning=state.running;state.running=d.scan.running;state.done=d.scan.done;
@@ -177,7 +180,12 @@ $('ai-settings-close').onclick=()=>$('ai-settings-dialog').close();
 $('ai-detect').onclick=async()=>{const b=$('ai-detect');b.disabled=true;$('ai-settings-status').textContent='正在检测…';try{const d=await api('ai/models',{endpoint:$('ai-endpoint').value,provider:$('ai-provider').value});$('ai-model').innerHTML=d.models.map(m=>'<option value="'+esc(m.name)+'">'+esc(m.name)+' · '+bytes(m.size)+'</option>').join('')||'<option value="">未找到本地模型</option>';$('ai-settings-status').textContent=d.models.length?'找到 '+d.models.length+' 个本地模型。':'未找到已下载的本地模型。可先在 Ollama 下载对话模型；扫描和清理不受影响。';}catch(e){$('ai-settings-status').textContent=e.message;}finally{b.disabled=false;}};
 $('ai-save').onclick=async()=>{try{await api('ai/settings',{endpoint:$('ai-endpoint').value,model:$('ai-model').value,provider:$('ai-provider').value});$('ai-settings-dialog').close();toast('本地 AI 设置已保存。');}catch(e){$('ai-settings-status').textContent=e.message;}};
 $('ai-result-close').onclick=()=>{++aiSequence;$('ai-result-dialog').close();};
+$('settings-ai-open').onclick=()=>$('ai-settings-open').onclick();
+$('settings-permission-open').onclick=()=>{if(typeof window!=='undefined'&&window.webkit?.messageHandlers?.spaceLens){window.webkit.messageHandlers.spaceLens.postMessage('permissions');}else{toast('请在系统设置 → 隐私与安全性 → 完全磁盘访问权限中，添加并开启空间磁盘管家；源码模式请授权使用的终端。');}};
+$('settings-project-open').onclick=()=>{if(typeof window==='undefined')return;if(window.webkit?.messageHandlers?.spaceLens){window.webkit.messageHandlers.spaceLens.postMessage('project');}else{window.open('https://github.com/wwwwwwjy/mac-space-lens','_blank','noopener,noreferrer');}};
+$('coffee-open').onclick=()=>{$('coffee-alipay').src='/assets/author-alipay.png';$('coffee-wechat').src='/assets/author-wechat.png';$('coffee-dialog').showModal();};
+$('coffee-close').onclick=()=>$('coffee-dialog').close();
 $('ai-result-dialog').addEventListener('cancel',()=>++aiSequence);
 async function explainWithAI(id){const item=state.items.find(x=>x.explain_id===id)||(typeof appState!=='undefined'?appState.rows.find(x=>x.explain_id===id):null);if(!item)return;const sequence=++aiSequence;$('ai-result-name').textContent=item.name;$('ai-result-notice').textContent='根据路径推测，没有读取文件正文，也没有检查工程引用。';$('ai-result-text').textContent='本地模型正在生成解释，首次加载可能较慢…';$('ai-result-dialog').showModal();try{const d=await api('ai/explain',{id});if(sequence!==aiSequence)return;$('ai-result-text').textContent=d.text;$('ai-result-notice').textContent=d.model+' · '+d.notice;}catch(e){if(sequence===aiSequence)$('ai-result-text').textContent=e.message+'\n\n可在左侧“本地 AI”中配置。';}}
 let poll=setInterval(()=>status().catch(()=>{}),4000);
-(async()=>{try{await status();await loadItems();}catch(e){toast(e.message);$('scan-status').textContent='无法连接本地服务。请双击“启动磁盘管家.command”重新打开。';}})();
+(async()=>{try{await status();await loadItems();}catch(e){toast(e.message);$('scan-status').textContent='无法连接本地服务。请退出后重新打开空间磁盘管家；源码模式请重新运行 server.py。';}})();

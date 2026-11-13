@@ -14,7 +14,7 @@ BUILD = ROOT / '.build'
 DIST = ROOT / 'dist'
 APP = DIST / '空间磁盘管家.app'
 MINIMUM = '12.0'
-VERSION = '1.1.2'
+VERSION = '1.0.0'
 
 
 def run(args):
@@ -38,6 +38,9 @@ def universal(source, output, frameworks=()):
 def main():
     if sys.platform != 'darwin':
         raise SystemExit('在 Mac 上构建。')
+    sys.path.insert(0, str(ROOT))
+    from support_assets import verify_support_assets
+    support_hashes = verify_support_assets()
     (BUILD / 'native').mkdir(parents=True, exist_ok=True)
     DIST.mkdir(exist_ok=True)
     executable = BUILD/'native'/'SpaceLens'
@@ -62,14 +65,14 @@ def main():
     shutil.copytree(BUILD/'frozen'/'space-lens-server', resources/'backend', symlinks=True)
     plist = {'CFBundleName': '空间磁盘管家', 'CFBundleDisplayName': '空间磁盘管家',
              'CFBundleIdentifier': 'local.spacelens.diskmanager', 'CFBundleExecutable': 'SpaceLens',
-             'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': VERSION, 'CFBundleVersion': '5',
+             'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': VERSION, 'CFBundleVersion': '1',
              'LSMinimumSystemVersion': MINIMUM, 'NSHighResolutionCapable': True,
              'CFBundleIconFile': 'SpaceLens', 'NSSupportsAutomaticGraphicsSwitching': True,
              'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True, 'NSAllowsArbitraryLoadsInWebContent': True},
              'NSDesktopFolderUsageDescription': '扫描你选择清理的桌面文件，显示占用与用途；只在确认后处理文件。',
              'NSDocumentsFolderUsageDescription': '读取文件大小和目录信息，帮助你核对可以清理的资料。',
              'NSDownloadsFolderUsageDescription': '查看下载文件占用，并在你确认后移到废纸篓或删除。',
-             'NSHumanReadableCopyright': '空间磁盘管家 · 本地工具。第三方许可见 Resources/Licenses。'}
+             'NSHumanReadableCopyright': '© 2026 汪同学（wwwwwwjy）。第三方许可见 Resources/Licenses。'}
     with (contents/'Info.plist').open('wb') as handle:
         plistlib.dump(plist, handle)
     (contents/'PkgInfo').write_bytes(b'APPL????')
@@ -90,6 +93,7 @@ def main():
         shutil.copy2(stdlib_license, licenses/'Python-LICENSE.txt')
     (licenses/'说明.txt').write_text('内置 Python 3.14 与 PyInstaller bootloader。PyInstaller 的分发例外允许随应用分发。SQLite 为公有领域。macOS 系统框架由系统提供。Ollama 与 AI 模型不包含在 App 中。\n', encoding='utf-8')
     shutil.copy2(ROOT/'使用说明.md', resources/'使用说明.md')
+    (resources/'author-support-integrity.json').write_text(json.dumps({'author': '汪同学', 'github': 'wwwwwwjy', 'assets': support_hashes}, ensure_ascii=False, indent=2)+'\n')
     run(['codesign', '--force', '--sign', '-', '--timestamp=none', APP])
     run(['codesign', '--verify', '--deep', '--strict', '--verbose=2', APP])
     # Check every Mach-O payload: no ARM-only dependency may hide in a universal app.
@@ -104,7 +108,7 @@ def main():
             if not {'arm64', 'x86_64'} <= set(architectures):
                 raise RuntimeError('非通用组件：'+str(candidate))
             binaries.append(str(candidate.relative_to(APP)))
-    archive = DIST/('空间磁盘管家-'+VERSION+'-universal.zip')
+    archive = DIST/('SpaceLens-'+VERSION+'-universal.zip')
     if archive.exists():
         archive.unlink()
     run(['ditto', '-c', '-k', '--sequesterRsrc', '--keepParent', APP, archive])
