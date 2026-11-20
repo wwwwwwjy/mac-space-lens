@@ -8,6 +8,12 @@
 
 **当前版本：1.0.1 · macOS 12+ · Apple Silicon / Intel 通用版**
 
+## 软件界面
+
+![空间磁盘管家的卸载残留核对界面](docs/screenshots/residual-review.png)
+
+卸载残留核对界面。截图使用示例文件，展示清理前可查看的归属依据、清理建议和删除影响。
+
 ## 下载与安装
 
 在本仓库的 [Releases](https://github.com/wwwwwwjy/mac-space-lens/releases) 下载最新 `SpaceLens-1.0.1-universal.zip`，解压后将完整 `.app` 拖入“应用程序”。设置页也可检查并安装 GitHub 正式更新。正式 App 内置 Python 运行环境，不需要另外安装 Python、Node.js 或浏览器扩展。
