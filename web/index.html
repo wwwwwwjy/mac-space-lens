@@ -54,10 +54,23 @@
   <section id="settings-section" class="section settings-page" hidden>
     <div class="settings-card"><div class="section-heading"><div><h2>本机访问权限</h2><p>需要读取桌面、文稿等受保护位置时，在系统设置中授权本应用。</p></div><button id="settings-permission-open">打开权限设置</button></div></div>
     <div class="settings-card"><div class="section-heading"><div><h2>本地 AI（可选）</h2><p>关联 Ollama 或 LM Studio，让本机模型补充文件用途与清理建议。</p></div><button id="settings-ai-open">本地 AI 设置</button></div></div>
-    <div class="settings-card"><span class="eyebrow">SPACE LENS</span><h2>关于空间磁盘管家</h2><p>作者：汪同学 · GitHub：wwwwwwjy</p><p>版本 1.0.0 · 手动扫描 · 本机处理</p><button id="settings-project-open">查看 GitHub 项目</button></div>
+    <div class="settings-card">
+      <div class="section-heading">
+        <div><h2>软件更新</h2><p>检查 GitHub 正式版本。发现更新后可查看说明并在应用内安装。</p></div>
+        <button id="update-check">立即检查更新</button>
+      </div>
+      <label id="update-preference" hidden><input type="checkbox" id="update-automatic" disabled> 启动时自动检查更新</label>
+      <p id="update-status" role="status">当前版本 1.0.1</p>
+      <div id="update-result" hidden>
+        <p id="update-notes"></p>
+        <button class="primary" id="update-install">下载并安装更新</button>
+        <p id="update-manual" hidden>请前往 GitHub 项目查看正式版下载附件。</p>
+      </div>
+    </div>
+    <div class="settings-card"><span class="eyebrow">SPACE LENS</span><h2>关于空间磁盘管家</h2><p>作者：汪同学 · GitHub：wwwwwwjy</p><p>版本 1.0.1 · 手动扫描 · 本机处理</p><button id="settings-project-open">查看 GitHub 项目</button></div>
     <div class="settings-card author-support" id="author-support"><div><span class="eyebrow">感谢你的支持</span><h2>让好用的工具继续变好</h2><p>如果空间磁盘管家帮到了你，欢迎自愿请作者喝一杯咖啡，支持后续维护。</p></div><button class="primary" id="coffee-open">请作者喝一杯咖啡</button></div>
   </section>
-  <footer>空间磁盘管家 1.0.0 · 汪同学 <span>·</span> 用途说明不读取文件正文 <span>·</span> 清理前建议退出相关应用</footer>
+  <footer>空间磁盘管家 1.0.1 · 汪同学 <span>·</span> 用途说明不读取文件正文 <span>·</span> 清理前建议退出相关应用</footer>
 </main>
 <div class="selection-bar" id="selection-bar" hidden><div><b id="selected-count">0 项</b><span id="selected-size"></span><small>废纸篓可撤回 · 直接删除不可撤回</small></div><div class="bulk-actions"><button id="clear-selection">取消选择</button><button class="danger-outline" data-operation="delete">直接删除</button><button class="primary" data-operation="trash">移入废纸篓</button></div></div>
 <dialog id="confirm-dialog"><div class="dialog-head"><span class="eyebrow" id="confirm-eyebrow">最后确认</span><h2 id="confirm-title">将这些文件移到废纸篓？</h2><p id="confirm-summary"></p></div><div id="confirm-list"></div><div class="warning" id="confirm-warning">请先退出相关应用。缓存可能重新生成；项目素材移走后可能导致剪辑工程离线。这里不会永久删除。</div><label class="ack" id="ack-wrap"><input type="checkbox" id="caution-ack">我已核对慎重清理项，并确认有备份或不再需要。</label><label class="delete-confirm" id="delete-confirm-wrap" hidden>输入「永久删除」以继续<input id="delete-confirm-text" type="text" placeholder="永久删除" autocomplete="off" spellcheck="false"></label><div class="dialog-actions"><button id="cancel-confirm">返回检查</button><button class="primary" id="commit">确认移到废纸篓</button></div></dialog>

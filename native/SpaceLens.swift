@@ -254,6 +254,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
             for key in ["PYTHONHOME", "PYTHONPATH", "PYTHONSTARTUP", "PYTHONINSPECT", "DYLD_LIBRARY_PATH", "DYLD_INSERT_LIBRARIES"] { environment.removeValue(forKey: key) }
             environment["SPACE_LENS_STATE"] = dir.path
             environment["SPACE_LENS_DATA"] = data.path
+            environment.removeValue(forKey: "SPACE_LENS_APP_BUNDLE")
+            if !smoke { environment["SPACE_LENS_APP_BUNDLE"] = Bundle.main.bundleURL.path }
             child.environment = environment
             let pipe = Pipe()
             outputPipe = pipe
@@ -357,7 +359,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
         case "permissions": openFullDiskAccess()
         case "project":
             if let project = URL(string: "https://github.com/wwwwwwjy/mac-space-lens") { NSWorkspace.shared.open(project) }
+        case "install-update": beginUpdateReplacement()
         default: break
+        }
+    }
+
+    func beginUpdateReplacement() {
+        guard !closing, !smoke, let runtime = runtime,
+              let executable = Bundle.main.executableURL else { return }
+        let fm = FileManager.default
+        let target = Bundle.main.bundleURL.resolvingSymlinksInPath()
+        let directory = target.deletingLastPathComponent()
+            .appendingPathComponent(".SpaceLens-update-" + UUID().uuidString, isDirectory: true)
+        let candidate = directory.appendingPathComponent(target.lastPathComponent)
+        do {
+            try fm.createDirectory(at: directory, withIntermediateDirectories: false,
+                                   attributes: [.posixPermissions: 0o700])
+            try fm.copyItem(at: runtime.appendingPathComponent("update-ready.app"), to: candidate)
+            let installer = Process()
+            installer.executableURL = executable
+            installer.arguments = ["--apply-update", String(getpid()), target.path, candidate.path]
+            installer.standardInput = FileHandle.nullDevice
+            installer.standardOutput = FileHandle.nullDevice
+            installer.standardError = FileHandle.nullDevice
+            try installer.run()
+            relaunchProcess = installer
+            NSApp.terminate(nil)
+        } catch {
+            try? fm.removeItem(at: directory)
+            webView.evaluateJavaScript("updateInstallFailed('无法准备替换 App。请确认应用所在文件夹可写，或从 GitHub 下载后手动替换。')")
         }
     }
 
@@ -471,15 +501,73 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate, WKNa
     }
 }
 
+func waitForExit(_ pid: Int32, seconds: Int) -> Bool {
+    for _ in 0..<(seconds * 20) {
+        if kill(pid, 0) == -1 && errno == ESRCH { return true }
+        usleep(50_000)
+    }
+    return false
+}
+
+func openApplication(_ path: String) -> Bool {
+    let launcher = Process()
+    launcher.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+    launcher.arguments = [path]
+    do {
+        try launcher.run()
+        launcher.waitUntilExit()
+        return launcher.terminationStatus == 0
+    } catch {
+        return false
+    }
+}
+
+func applyUpdate(oldPID: Int32, target: URL, candidate: URL) -> Never {
+    let fm = FileManager.default
+    let directory = candidate.deletingLastPathComponent()
+    guard target.path == Bundle.main.bundleURL.resolvingSymlinksInPath().path,
+          candidate.lastPathComponent == target.lastPathComponent,
+          directory.deletingLastPathComponent().path == target.deletingLastPathComponent().path,
+          directory.lastPathComponent.hasPrefix(".SpaceLens-update-") else { exit(2) }
+    var failure: String
+    var canClean = true
+    if !waitForExit(oldPID, seconds: 600) {
+        failure = "旧版本仍在运行，请完成文件操作后重试更新。"
+    } else if renamex_np(candidate.path, target.path, UInt32(RENAME_SWAP)) != 0 {
+        failure = "无法替换当前 App，请检查应用所在目录的写入权限。"
+        _ = openApplication(target.path)
+    } else if openApplication(target.path) {
+        try? fm.removeItem(at: directory)
+        exit(0)
+    } else if renamex_np(candidate.path, target.path, UInt32(RENAME_SWAP)) == 0 {
+        failure = "新版本无法打开，已恢复旧版本。"
+        _ = openApplication(target.path)
+    } else {
+        canClean = false
+        failure = "新版本无法打开。旧版本保留在：\(candidate.path)"
+    }
+    if canClean { try? fm.removeItem(at: directory) }
+    NSApplication.shared.setActivationPolicy(.accessory)
+    NSApplication.shared.activate(ignoringOtherApps: true)
+    let alert = NSAlert()
+    alert.messageText = "空间磁盘管家更新未完成"
+    alert.informativeText = failure
+    alert.runModal()
+    exit(1)
+}
+
+let arguments = CommandLine.arguments
+if arguments.count == 5, arguments[1] == "--apply-update",
+   let oldPID = Int32(arguments[2]), oldPID > 1, oldPID != getpid() {
+    applyUpdate(oldPID: oldPID, target: URL(fileURLWithPath: arguments[3], isDirectory: true),
+                candidate: URL(fileURLWithPath: arguments[4], isDirectory: true))
+}
+
 // Relaunch only after the old window/process is gone, without a shell or login item.
 if let index = CommandLine.arguments.firstIndex(of: "--wait-for-exit"),
    CommandLine.arguments.count > index + 1, let oldPID = Int32(CommandLine.arguments[index + 1]),
    oldPID > 1, oldPID != getpid() {
-    for _ in 0..<200 {
-        if kill(oldPID, 0) != 0 { break }
-        usleep(50_000)
-    }
-    if kill(oldPID, 0) == 0 { exit(1) }
+    if !waitForExit(oldPID, seconds: 10) { exit(1) }
 }
 
 let application = NSApplication.shared

@@ -24,6 +24,8 @@ from lifecycle import Lifecycle
 from local_ai import LocalAI
 from app_management import AppManager
 from support_assets import SUPPORT_ASSETS, read_support_asset
+from updates import Updater
+
 
 
 class LocalServer(ThreadingHTTPServer):
@@ -31,7 +33,7 @@ class LocalServer(ThreadingHTTPServer):
     allow_reuse_address = True
 
 
-def make_handler(inv, actions, token, lifecycle=None, ai=None, apps=None):
+def make_handler(inv, actions, token, lifecycle=None, ai=None, apps=None, updater=None):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *args):
             pass  # Never log tokens, private paths or file names.
@@ -71,6 +73,10 @@ def make_handler(inv, actions, token, lifecycle=None, ai=None, apps=None):
                     disk = shutil.disk_usage('/System/Volumes/Data' if Path('/System/Volumes/Data').exists() else HOME)
                     self.send(200, {'scan': dict(inv.progress), 'disk': dict(total=disk.total, used=disk.used, free=disk.free),
                                     'roots': inv.roots_data(), 'home': str(HOME)})
+                elif url.path == '/api/updates/settings' and updater:
+                    self.send(200, updater.settings())
+                elif url.path == '/api/updates/check' and updater:
+                    self.send(200, updater.check())
                 elif url.path == '/api/items':
                     q = urllib.parse.parse_qs(url.query)
                     rows = inv.candidates(q.get('risk', ['all'])[0], q.get('q', [''])[0])
@@ -112,6 +118,13 @@ def make_handler(inv, actions, token, lifecycle=None, ai=None, apps=None):
                     raise ValueError('请求格式不正确。')
                 if lifecycle and lifecycle.closing.is_set():
                     raise ValueError('程序正在退出，当前文件操作完成后会自动关闭。')
+                if updater and self.path == '/api/updates/settings':
+                    self.send(200, updater.configure(data.get('automatic')))
+                    return
+                if updater and self.path == '/api/updates/install':
+                    updater.prepare(data.get('version'))
+                    self.send(200, {'ready': True})
+                    return
                 if self.path.startswith('/api/ai/') and ai:
                     if self.path == '/api/ai/settings':
                         result = ai.configure(data.get('endpoint'), data.get('model'), data.get('provider','ollama'))
@@ -233,7 +246,9 @@ def main():
     ai = LocalAI(DATA_DIR, HOME)
     apps = AppManager(actions, HOME, DATA_DIR)
     token = secrets.token_urlsafe(32)
-    handler = make_handler(inv, actions, token, lifecycle, ai, apps)
+    bundle = os.environ.get('SPACE_LENS_APP_BUNDLE') if args.desktop else None
+    updater = Updater(Path(bundle) if bundle else None, STATE, DATA_DIR)
+    handler = make_handler(inv, actions, token, lifecycle, ai, apps, updater)
     try:
         server = LocalServer(('127.0.0.1', args.port), handler)
     except OSError:

@@ -14,7 +14,7 @@ BUILD = ROOT / '.build'
 DIST = ROOT / 'dist'
 APP = DIST / '空间磁盘管家.app'
 MINIMUM = '12.0'
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 
 
 def run(args):
@@ -65,7 +65,7 @@ def main():
     shutil.copytree(BUILD/'frozen'/'space-lens-server', resources/'backend', symlinks=True)
     plist = {'CFBundleName': '空间磁盘管家', 'CFBundleDisplayName': '空间磁盘管家',
              'CFBundleIdentifier': 'local.spacelens.diskmanager', 'CFBundleExecutable': 'SpaceLens',
-             'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': VERSION, 'CFBundleVersion': '1',
+             'CFBundlePackageType': 'APPL', 'CFBundleShortVersionString': VERSION, 'CFBundleVersion': '2',
              'LSMinimumSystemVersion': MINIMUM, 'NSHighResolutionCapable': True,
              'CFBundleIconFile': 'SpaceLens', 'NSSupportsAutomaticGraphicsSwitching': True,
              'NSAppTransportSecurity': {'NSAllowsLocalNetworking': True, 'NSAllowsArbitraryLoadsInWebContent': True},

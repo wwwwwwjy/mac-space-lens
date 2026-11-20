@@ -175,6 +175,86 @@ $('commit').onclick=async()=>{
 };
 $('quit').onclick=async()=>{if(typeof window!=='undefined'&&window.webkit?.messageHandlers?.spaceLens){window.webkit.messageHandlers.spaceLens.postMessage('quit');return;}try{await api('quit',{});clearInterval(poll);toast('本地服务已退出，可以关闭此页面。');document.querySelectorAll('button').forEach(b=>b.disabled=true);}catch(e){toast(e.message);}};
 let aiSequence=0;
+const updateCheck = $('update-check');
+const updateStatus = $('update-status');
+const updateResult = $('update-result');
+const updateInstall = $('update-install');
+const updateAutomatic = $('update-automatic');
+
+async function checkUpdate(automatic = false) {
+  if (updateCheck.disabled) return;
+  updateCheck.disabled = true;
+  updateResult.hidden = true;
+  updateStatus.textContent = '正在检查 GitHub 正式版本…';
+  try {
+    const release = await api('updates/check');
+    updateStatus.textContent = release.update
+      ? '发现新版本 ' + release.version + '（当前 ' + release.current + '）'
+      : '已是最新版本 ' + release.current;
+    if (release.update) {
+      $('update-notes').textContent = release.notes || '此版本没有附加说明。';
+      updateInstall.dataset.version = release.version;
+      updateInstall.hidden = !release.installable;
+      $('update-manual').hidden = release.installable;
+      updateInstall.textContent = '下载并安装更新';
+      updateResult.hidden = false;
+      if (automatic) toast('发现新版本 ' + release.version + '。前往设置查看更新说明。');
+    }
+  } catch (error) {
+    updateStatus.textContent = '检查失败：' + error.message;
+  } finally {
+    updateCheck.disabled = false;
+  }
+}
+
+function updateInstallFailed(message) {
+  updateStatus.textContent = '更新失败：' + message;
+  updateInstall.textContent = '重试安装';
+  updateInstall.disabled = false;
+  updateCheck.disabled = false;
+}
+
+if (updateCheck && updateAutomatic) {
+  updateCheck.onclick = () => checkUpdate();
+  updateAutomatic.onchange = async () => {
+    updateAutomatic.disabled = true;
+    try {
+      await api('updates/settings', {automatic: updateAutomatic.checked});
+    } catch (error) {
+      updateAutomatic.checked = !updateAutomatic.checked;
+      toast(error.message);
+    } finally {
+      updateAutomatic.disabled = false;
+    }
+  };
+  updateInstall.onclick = async () => {
+    const bridge = window.webkit?.messageHandlers?.spaceLens;
+    if (!bridge || updateInstall.disabled || updateCheck.disabled) return;
+    updateInstall.disabled = true;
+    updateCheck.disabled = true;
+    updateInstall.textContent = '正在下载并校验…';
+    updateStatus.textContent = '请保持应用开启。校验完成后将退出并重新启动。';
+    try {
+      await api('updates/install', {version: updateInstall.dataset.version});
+      updateStatus.textContent = '正在切换到新版本…';
+      bridge.postMessage('install-update');
+    } catch (error) {
+      updateInstallFailed(error.message);
+    }
+  };
+  (async () => {
+    try {
+      const settings = await api('updates/settings');
+      updateStatus.textContent = '当前版本 ' + settings.current;
+      updateAutomatic.checked = settings.automatic;
+      updateAutomatic.disabled = !settings.native;
+      $('update-preference').hidden = !settings.native;
+      if (settings.automatic) await checkUpdate(true);
+    } catch (error) {
+      updateStatus.textContent = '无法读取更新设置：' + error.message;
+    }
+  })();
+}
 $('ai-settings-open').onclick=async()=>{try{const settings=await api('ai/settings');$('ai-provider').value=settings.provider||'ollama';$('ai-endpoint').value=settings.endpoint;$('ai-model').innerHTML='<option value="'+esc(settings.model)+'">'+esc(settings.model||'先检测本机模型')+'</option>';$('ai-settings-status').textContent='';$('ai-settings-dialog').showModal();if(typeof discoverAI==='function')await discoverAI();}catch(e){toast(e.message);}};
 $('ai-settings-close').onclick=()=>$('ai-settings-dialog').close();
 $('ai-detect').onclick=async()=>{const b=$('ai-detect');b.disabled=true;$('ai-settings-status').textContent='正在检测…';try{const d=await api('ai/models',{endpoint:$('ai-endpoint').value,provider:$('ai-provider').value});$('ai-model').innerHTML=d.models.map(m=>'<option value="'+esc(m.name)+'">'+esc(m.name)+' · '+bytes(m.size)+'</option>').join('')||'<option value="">未找到本地模型</option>';$('ai-settings-status').textContent=d.models.length?'找到 '+d.models.length+' 个本地模型。':'未找到已下载的本地模型。可先在 Ollama 下载对话模型；扫描和清理不受影响。';}catch(e){$('ai-settings-status').textContent=e.message;}finally{b.disabled=false;}};

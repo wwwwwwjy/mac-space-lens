@@ -6,11 +6,11 @@
 
 支持磁盘占用分析、软件卸载、卸载残留核对，以及可选的本地 AI 解释。默认等待用户点击开始扫描；所有清理均需手动选择并确认。
 
-**当前版本：1.0.0 · macOS 12+ · Apple Silicon / Intel 通用版**
+**当前版本：1.0.1 · macOS 12+ · Apple Silicon / Intel 通用版**
 
 ## 下载与安装
 
-在本仓库的 [Releases](https://github.com/wwwwwwjy/mac-space-lens/releases) 下载 `SpaceLens-1.0.0-universal.zip`，解压后将完整 `.app` 拖入“应用程序”。正式 App 内置 Python 运行环境，不需要另外安装 Python、Node.js 或浏览器扩展。
+在本仓库的 [Releases](https://github.com/wwwwwwjy/mac-space-lens/releases) 下载最新 `SpaceLens-1.0.1-universal.zip`，解压后将完整 `.app` 拖入“应用程序”。设置页也可检查并安装 GitHub 正式更新。正式 App 内置 Python 运行环境，不需要另外安装 Python、Node.js 或浏览器扩展。
 
 当前安装包为本地 ad-hoc 签名，尚未获得 Apple Developer ID 公证。通过网络下载后，macOS 可能要求在“系统设置 → 隐私与安全性”中确认允许打开。请核对下载来源及发布页的 SHA-256 校验值。
 
